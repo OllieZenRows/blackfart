@@ -342,6 +342,22 @@
 }
 
 @media (max-width: 650px) {
+  .section-number {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .map-legend {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .map-legend span:last-child {
+    max-width: none;
+    text-align: left;
+  }
+
   .world-map {
     height: 340px;
   }
