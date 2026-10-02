@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorldMap, type MapLocation } from "./world-map";
+import { samples } from "./samples";
 import { PinComposer } from "./pin-composer";
 import { clearPinDraft, persistPinDraft, restorePinDraft, type PinDraft } from "./pin-draft";
 
@@ -21,18 +22,7 @@ const categories = [
   ["eleven-second", "The 11-second mishap", "One that went on a little long"],
   ["other", "Other circumstances", "The story that defies categories"],
 ];
-const samples = [
-  { title: "The original", file: "original.mp3", note: "Breviceps · CC0 source clip", source: "https://freesound.org/people/Breviceps/sounds/445998/" },
-  { title: "Low blow", file: "subterranean.mp3", note: "DSISStudios · CC0 source clip", source: "https://freesound.org/people/DSISStudios/sounds/521092/" },
-  { title: "The loose one", file: "loose.mp3", note: "DSISStudios · CC0 source clip", source: "https://freesound.org/people/DSISStudios/sounds/640803/" },
-  { title: "Bali belly", file: "cosmic.mp3", note: "DSISStudios · CC0 source clip", source: "https://freesound.org/people/DSISStudios/sounds/640801/" },
-  { title: "Curry regret", file: "curry.mp3", note: "DSISStudios · CC0 source clip", source: "https://freesound.org/people/DSISStudios/sounds/640799/" },
-  { title: "Aftershock", file: "aftershock.mp3", note: "DSISStudios · CC0 source clip", source: "https://freesound.org/people/DSISStudios/sounds/640804/" },
-  { title: "Pocket thunder", file: "pocket-thunder.mp3", note: "Agoris · sound effect, not authenticated", source: "https://freesound.org/people/Agoris/sounds/530076/" },
-  { title: "Phone mic / 03", file: "phone-mic-03.mp3", note: "Creator says genuine · not independently verified", source: "https://freesound.org/people/anndszjuvupftbim/sounds/803562/" },
-  { title: "Mouth-made decoy", file: "mouth-made.mp3", note: "SamsterBirdies · made with a mouth", source: "https://freesound.org/people/SamsterBirdies/sounds/558740/" },
-  { title: "The squeaky one", file: "squeaky.mp3", note: "mefrancis13 · a video-game-like squeak", source: "https://freesound.org/people/mefrancis13/sounds/117606/" },
-];
+
 const labelFor = (value: string) => categories.find(([key]) => key === value)?.[1] ?? "Other circumstances";
 const verificationLabel = (entry: Pick<Entry, "mediaType" | "verificationStatus">) => entry.verificationStatus === "listener-confirmed" ? "LISTENER CHECKED" : entry.mediaType ? "UNVERIFIED CLIP" : "UNVERIFIED STORY";
 const verificationNote = (entry: Pick<Entry, "mediaType" | "verificationStatus">) => entry.verificationStatus === "listener-confirmed"
@@ -178,7 +168,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
     <header className="topbar">
       <a className="brand" href="#top" aria-label="Blackfart home"><span className="brand-mark">bƒ</span><span>blackfart<span className="brand-dot">.com</span></span></a>
       <nav className="main-nav" aria-label="Main navigation">
-        <a className="nav-active" href="#world">World map</a><a href="#chart">Fartifyty</a><a href="#sound-lab">Sound lab</a>
+        <a className="nav-active" href="#world">World map</a><a href="#chart">Fartifyty</a><a href="#sound-lab">Sound lab</a><a href="/symphony">Symphony</a>
       </nav>
       <div className="account-actions">
         <button className="coin-pill" onClick={() => setModal("coins")}><span className="coin-dot">F</span> FART COIN <span className="coin-soon">BIDS SOON</span></button>
@@ -223,7 +213,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
       </section>
 
       <section className="sound-lab" id="sound-lab">
-        <div className="sound-lab-copy"><span className="section-number">03 /</span><p className="eyebrow">THE PRESSURE ROOM</p><h2>THE OPEN<br />SOUND LAB.</h2><p>Ten CC0 reference clips, separate from member entries. Creator descriptions are credited, but they do not verify how a sound was made.</p><a href="/audio/sources.json" target="_blank" rel="noopener noreferrer">Sound credits &amp; licence ↗</a></div>
+        <div className="sound-lab-copy"><span className="section-number">03 /</span><p className="eyebrow">THE PRESSURE ROOM</p><h2>THE OPEN<br />SOUND LAB.</h2><p>Ten CC0 reference clips, separate from member entries. Creator descriptions are credited, but they do not verify how a sound was made.</p><a href="/audio/sources.json" target="_blank" rel="noopener noreferrer">Sound credits &amp; licence ↗</a><a className="button button-lime symphony-lab-link" href="/symphony">Make a symphony ↗</a></div>
         <div className="sample-board"><div className="sample-board-head"><span>CC0 REEL / {String(samples.length).padStart(3, "0")}</span><span>{playingSample ? "PLAYING" : "READY"}</span></div><div className="sample-now"><div className="sample-disc">∿</div><div><strong>{sample.title}</strong><span>{sample.note}</span></div><button className="sample-play" onClick={() => void playSample()} aria-label={playingSample ? "Stop sound" : `Play ${sample.title}`}>{playingSample ? "Ⅱ" : "▶"}</button></div><div className="sample-list">{samples.map((item, index) => <div className="sample-track" key={item.file}><button type="button" className={`sample-select ${item.file === sample.file ? "selected" : ""}`} aria-label={`Select sample: ${item.title}. ${item.note}`} onClick={() => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; } setPlayingSample(false); setSample(item); }}><span>{String(index + 1).padStart(2, "0")}</span><span className="sample-copy"><strong>{item.title}</strong><small>{item.note}</small></span><span>{item.file === sample.file ? "■" : "▶"}</span></button><a className="sample-credit" href={item.source} target="_blank" rel="noopener noreferrer" aria-label={`Open source and licence for ${item.title}`} title="Source and licence">↗</a></div>)}</div><audio ref={audioRef} onEnded={() => setPlayingSample(false)} onError={() => setPlayingSample(false)} /></div>
       </section>
 

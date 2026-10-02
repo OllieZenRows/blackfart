@@ -13,6 +13,14 @@ npm run dev
 
 The local Sites preview uses a mock ChatGPT identity. Visit `/signin-with-chatgpt?return_to=/` to sign in as `Seedy`, or `/signout-with-chatgpt?return_to=/` to sign out. Local media and database state are for development only. The main submission flow starts on the map: click, tap, or press Enter to choose a rough pin, then add a short story in the inline composer. Drag or tap again to move the pin without losing the story or clip. Signing in restores the pin and story from session storage; add media after sign-in. Submit explicitly with consent; entries remain pending until reviewed. Cancel or a successful submission clears the draft. Drafts expire after 24 hours.
 
+## Fart Symphony
+
+Open `/symphony` for a four-track, sixteen-step sampler. Three presets start immediately; notes, tempo, pitch, level, mute, and sample choices can be edited during playback. Each trigger trims initial silence and plays a short, faded slice. The ten CC0 sound-lab clips are available as instruments. Own audio files up to 8 MB stay in the browser and are never uploaded or submitted; compositions and imported files are not retained after leaving the studio.
+
+Export renders four bars to a stereo 44.1 kHz PCM WAV in the browser, with an audio preview and save link. It needs no account or server storage. Web Audio playback starts only after a user gesture and stops when leaving the studio. The audio engine tests use simulated clocks and contexts; browser playback, file import, export, and responsive checks are separate.
+
+Run the sampler tests with `node --experimental-strip-types --test tests/symphony-*.test.mjs`.
+
 ## Storage and moderation
 
 Production entry metadata, member IDs, private account emails, votes, and review state use Cloudflare D1. Audio and video bytes use Cloudflare R2. Schema changes are kept in `drizzle/` and applied by the Sites publish workflow. The publisher's ChatGPT email is configured as the private `BF_ADMIN_EMAIL` runtime setting to enable moderation.
