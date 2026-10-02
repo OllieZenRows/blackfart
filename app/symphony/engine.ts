@@ -50,6 +50,7 @@ export class SymphonyEngine {
   private requests = new Set<AbortController>();
   private voices = new Set<Voice>();
   private onsets = new WeakMap<AudioBuffer, number>();
+  private preparedNotes = new WeakSet<AudioBuffer>();
   private timer?: ReturnType<typeof setInterval>;
   private generation = 0;
   private dead = false;
@@ -91,6 +92,7 @@ export class SymphonyEngine {
         this.decoder ??= offline(1);
         const buffer = await this.decoder.decodeAudioData(bytes);
         if (!buffer.duration) throw new Error('This audio file contains no sound.');
+        if (url.startsWith('/audio/efm/')) this.preparedNotes.add(buffer);
         return buffer;
       } catch (error) {
         this.cache.delete(url);
@@ -132,9 +134,12 @@ export class SymphonyEngine {
     const source = context.createBufferSource();
     const envelope = context.createGain();
     const rate = Math.pow(2, clamp(pitch, -24, 24) / 12);
-    // A 280 ms source slice speeds up/slows down with pitch, capped at 560 ms.
-    const offset = this.onset(buffer);
-    const duration = Math.min(0.56, 0.28 / rate, (buffer.duration - offset) / rate);
+    // Preserve the edited kit's attack and release; imports still use an onset slice.
+    const prepared = this.preparedNotes.has(buffer);
+    const offset = prepared ? 0 : this.onset(buffer);
+    const duration = prepared
+      ? Math.min(0.56, buffer.duration / rate)
+      : Math.min(0.56, 0.28 / rate, (buffer.duration - offset) / rate);
     const fade = Math.min(0.008, duration / 3);
     source.buffer = buffer;
     source.playbackRate.value = rate;
@@ -240,7 +245,8 @@ export class SymphonyEngine {
     const resumed = context.resume();
     const [buffer] = await Promise.all([this.load(sampleUrl), resumed]);
     if (this.dead || token !== this.generation) return;
-    this.previewOutput ??= output(context, 1);
+    // Audition at the same master level as one track in the four-part mix.
+    this.previewOutput ??= output(context, 4);
     this.trigger(context, this.previewOutput, buffer, context.currentTime + 0.01, pitch, volume, true);
   }
 

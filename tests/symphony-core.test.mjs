@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { SymphonyEngine } from '../app/symphony/engine.ts';
 let resolveFetch;
 let starts = [];
+let stops = [];
 class Param { value=0; setValueAtTime(){} linearRampToValueAtTime(){} }
-class Node { gain=new Param(); threshold=new Param(); knee=new Param(); ratio=new Param(); attack=new Param(); release=new Param(); playbackRate=new Param(); connect(){} disconnect(){} start(...args){starts.push(args)} stop(){} }
+class Node { gain=new Param(); threshold=new Param(); knee=new Param(); ratio=new Param(); attack=new Param(); release=new Param(); playbackRate=new Param(); connect(){} disconnect(){} start(...args){starts.push(args)} stop(...args){stops.push(args)} }
 class Context { currentTime=0; state='running'; sampleRate=44100; destination=new Node(); createGain(){return new Node()} createDynamicsCompressor(){return new Node()} createBufferSource(){return new Node()} async resume(){} async close(){} async decodeAudioData(){return {duration:1}} }
 globalThis.window={AudioContext:Context,OfflineAudioContext:Context};
 globalThis.AudioContext=Context;
@@ -54,5 +55,17 @@ test('WAV export produces PCM16 stereo without creating or resuming a live conte
  assert.equal(view.getUint16(34,true),16);
  assert.equal(view.getUint32(40,true),Math.ceil((8+0.75)*44100)*4);
  assert.equal(liveContexts,0);
+ engine.dispose();
+});
+
+test('prepared EFM notes retain their full attack and release instead of being sliced', async()=>{
+ starts=[];stops=[];
+ Context.prototype.decodeAudioData=async()=>({duration:0.35,sampleRate:44100,getChannelData:()=>new Float32Array(15435)});
+ globalThis.window={AudioContext:Context,OfflineAudioContext:Context};
+ globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
+ const engine=new SymphonyEngine();
+ await engine.preview('/audio/efm/soft-pop.wav',0,0.5);
+ assert.equal(starts[0][1],0);
+ assert.ok(Math.abs(stops[0][0]-0.36)<0.000001);
  engine.dispose();
 });

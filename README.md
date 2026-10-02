@@ -13,13 +13,15 @@ npm run dev
 
 The local Sites preview uses a mock ChatGPT identity. Visit `/signin-with-chatgpt?return_to=/` to sign in as `Seedy`, or `/signout-with-chatgpt?return_to=/` to sign out. Local media and database state are for development only. The main submission flow starts on the map: click, tap, or press Enter to choose a rough pin, then add a short story in the inline composer. Drag or tap again to move the pin without losing the story or clip. Signing in restores the pin and story from session storage; add media after sign-in. Submit explicitly with consent; entries remain pending until reviewed. Cancel or a successful submission clears the draft. Drafts expire after 24 hours.
 
-## Fart Symphony
+## EFM
 
-Open `/symphony` for a four-track, sixteen-step sampler. Three presets start immediately; notes, tempo, pitch, level, mute, and sample choices can be edited during playback. Each trigger trims initial silence and plays a short, faded slice. The ten CC0 sound-lab clips are available as instruments. Own audio files up to 8 MB stay in the browser and are never uploaded or submitted; compositions and imported files are not retained after leaving the studio.
+Open `/efm` for a four-track, sixteen-step sampler. The previous `/symphony` address redirects here. Three restrained presets (Easy Groove, After Hours, Soft Bounce) start at natural pitch with fewer overlapping notes. Notes, tempo, pitch, level, mute, and sample choices can be edited during playback. EFM uses six short CC0 sample edits with softened high frequencies, smooth fades, and balanced levels; the original ten recordings remain in the sound lab. Prepared notes retain their full attack and release, and previews use the same master level as the mix. Own audio files up to 8 MB stay in the browser and are never uploaded or submitted; compositions and imported files are not retained after leaving the studio.
 
 Export renders four bars to a stereo 44.1 kHz PCM WAV in the browser, with an audio preview and save link. It needs no account or server storage. Web Audio playback starts only after a user gesture and stops when leaving the studio. The audio engine tests use simulated clocks and contexts; browser playback, file import, export, and responsive checks are separate.
 
 Run the sampler tests with `node --experimental-strip-types --test tests/symphony-*.test.mjs`.
+
+`public/audio/efm/manifest.json` documents each note's source, edit, and measured audio levels. The optional `scripts/build-efm-kit.py` rebuilds the kit from the credited originals; its dependencies are listed at the top of that script. These tools are not required to run the website.
 
 ## Storage and moderation
 

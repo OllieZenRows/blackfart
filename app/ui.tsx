@@ -168,7 +168,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
     <header className="topbar">
       <a className="brand" href="#top" aria-label="Blackfart home"><span className="brand-mark">bƒ</span><span>blackfart<span className="brand-dot">.com</span></span></a>
       <nav className="main-nav" aria-label="Main navigation">
-        <a className="nav-active" href="#world">World map</a><a href="#chart">Fartifyty</a><a href="#sound-lab">Sound lab</a><a href="/symphony">Symphony</a>
+        <a className="nav-active" href="#world">World map</a><a href="#chart">Fartifyty</a><a href="#sound-lab">Sound lab</a><a href="/efm">EFM</a>
       </nav>
       <div className="account-actions">
         <button className="coin-pill" onClick={() => setModal("coins")}><span className="coin-dot">F</span> FART COIN <span className="coin-soon">BIDS SOON</span></button>
@@ -213,7 +213,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
       </section>
 
       <section className="sound-lab" id="sound-lab">
-        <div className="sound-lab-copy"><span className="section-number">03 /</span><p className="eyebrow">THE PRESSURE ROOM</p><h2>THE OPEN<br />SOUND LAB.</h2><p>Ten CC0 reference clips, separate from member entries. Creator descriptions are credited, but they do not verify how a sound was made.</p><a href="/audio/sources.json" target="_blank" rel="noopener noreferrer">Sound credits &amp; licence ↗</a><a className="button button-lime symphony-lab-link" href="/symphony">Make a symphony ↗</a></div>
+        <div className="sound-lab-copy"><span className="section-number">03 /</span><p className="eyebrow">THE PRESSURE ROOM</p><h2>THE OPEN<br />SOUND LAB.</h2><p>Ten CC0 reference clips, separate from member entries. Creator descriptions are credited, but they do not verify how a sound was made.</p><a href="/audio/sources.json" target="_blank" rel="noopener noreferrer">Sound credits &amp; licence ↗</a><a className="button button-lime symphony-lab-link" href="/efm">Make an EFM mix ↗</a></div>
         <div className="sample-board"><div className="sample-board-head"><span>CC0 REEL / {String(samples.length).padStart(3, "0")}</span><span>{playingSample ? "PLAYING" : "READY"}</span></div><div className="sample-now"><div className="sample-disc">∿</div><div><strong>{sample.title}</strong><span>{sample.note}</span></div><button className="sample-play" onClick={() => void playSample()} aria-label={playingSample ? "Stop sound" : `Play ${sample.title}`}>{playingSample ? "Ⅱ" : "▶"}</button></div><div className="sample-list">{samples.map((item, index) => <div className="sample-track" key={item.file}><button type="button" className={`sample-select ${item.file === sample.file ? "selected" : ""}`} aria-label={`Select sample: ${item.title}. ${item.note}`} onClick={() => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; } setPlayingSample(false); setSample(item); }}><span>{String(index + 1).padStart(2, "0")}</span><span className="sample-copy"><strong>{item.title}</strong><small>{item.note}</small></span><span>{item.file === sample.file ? "■" : "▶"}</span></button><a className="sample-credit" href={item.source} target="_blank" rel="noopener noreferrer" aria-label={`Open source and licence for ${item.title}`} title="Source and licence">↗</a></div>)}</div><audio ref={audioRef} onEnded={() => setPlayingSample(false)} onError={() => setPlayingSample(false)} /></div>
       </section>
 
