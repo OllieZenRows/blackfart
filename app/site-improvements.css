@@ -67,7 +67,7 @@
 }
 
 .map-popup a {
-  color: #29351b;
+  color: #e2fc63;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -341,7 +341,62 @@
   flex-wrap: wrap;
 }
 
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.map-first-head { align-items: center; padding-bottom: 16px; }
+.map-step-label { flex: none; color: #d2dec0; font: 10px var(--mono); letter-spacing: .06em; }
+.map-step-label span { margin: 0 8px; color: var(--acid); }
+.world-map.leaflet-container { cursor: crosshair; }
+.map-draft-icon { display: grid; place-items: center; background: var(--acid); color: #1b2014; border: 3px solid #192013; border-radius: 50%; box-shadow: 0 0 0 7px #e2fc6350, 0 3px 14px #0005; }
+.map-draft-icon > span { font: bold 28px/1 Arial, sans-serif; }
+.map-pick-hint { position: absolute; z-index: 500; top: 14px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 110px); padding: 10px 15px; border-radius: 3px; color: #f1f4e8; background: #1d211bef; box-shadow: 0 2px 9px #0002; font-size: 12px; text-align: center; pointer-events: none; }
+.map-center-button { position: absolute; z-index: 500; bottom: 30px; right: 12px; padding: 9px 12px; min-height: 38px; border: 1px solid #5b674c; border-radius: 3px; background: #1e251bea; color: #e7efda; font-size: 11px; }
+.map-center-button:hover { border-color: var(--acid); }
+.pin-composer { border: 1px solid #718044; border-top: 3px solid var(--acid); padding: 23px; margin-top: 14px; background: #23291c; scroll-margin: 24px; }
+.pin-composer-heading { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
+.pin-draft-label { color: var(--acid); font: 9px var(--mono); letter-spacing: .07em; }
+.pin-composer h3 { font: 32px/1.1 var(--display); margin: 7px 0; }
+.pin-composer-heading p { margin: 0 0 19px; color: #a9b39b; font-size: 12px; }
+.pin-cancel { flex: none; padding: 6px 0; border: 0; color: #c0c9b3; background: none; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.pin-quick-form { display: grid; gap: 13px; }
+.pin-story-label { color: #eef3e4; font-size: 12px; }
+.pin-story-label span { margin-left: 5px; color: #96a287; font-size: 11px; }
+.pin-quick-form textarea { width: 100%; border: 1px solid #515f42; border-radius: 3px; padding: 13px; min-height: 80px; resize: vertical; background: #181e14; color: #eef3e4; font: 14px/1.5 Arial,sans-serif; }
+.pin-quick-form textarea::placeholder { color: #8a967c; }
+.pin-media-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pin-media-actions > button, .pin-upload, .pin-category select { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 11px; border: 1px solid #546342; border-radius: 3px; background: #2b3422; color: #dbe7c8; font-size: 12px; cursor: pointer; }
+.pin-upload:focus-within { outline: 2px solid var(--acid); outline-offset: 3px; }
+.pin-upload.is-disabled { opacity: .55; cursor: not-allowed; }
+.pin-category { margin-left: auto; }
+.pin-category select { max-width: 100%; }
+.pin-media-actions .pin-recording { border-color: #ef9c79; color: #ffc1a6; }
+.pin-helper { color: #acb79d; font-size: 12px; line-height: 1.5; margin: 0; }
+.pin-clip { padding: 11px; border: 1px solid #48573a; background: #1a2115; }
+.pin-clip > div { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 9px; font-size: 12px; }
+.pin-clip span { overflow-wrap: anywhere; min-width: 0; }
+.pin-clip button { background: none; border: 0; color: #c2d5a1; text-decoration: underline; }
+.pin-clip audio, .pin-clip video { display: block; width: 100%; max-height: 210px; }
+.pin-form-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 7px; }
+.pin-form-footer > span { color: #9fae8e; font-size: 11px; }
+.pin-form-footer .button { flex: none; }
+.pin-success { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 18px; background: #2b351e; border: 1px solid #718448; color: #d5e3be; font-size: 13px; }
+.pin-success strong { color: var(--acid); }
+.pin-success button { margin-left: auto; border: 0; background: none; color: var(--acid); text-decoration: underline; }
+
 @media (max-width: 650px) {
+  .map-first-head { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .map-first-head p { font-size: 12px; max-width: none; }
+  .map-step-label { font-size: 9px; }
+  .map-pick-hint { top: 12px; font-size: 11px; padding: 9px 10px; }
+  .map-center-button { font-size: 10px; right: 8px; }
+  .pin-composer { padding: 17px 13px; }
+  .pin-composer h3 { font-size: 27px; }
+  .pin-cancel { font-size: 11px; }
+  .pin-composer-heading p { font-size: 11px; }
+  .pin-quick-form textarea { font-size: 16px; }
+  .pin-category { margin-left: 0; width: 100%; }
+  .pin-category select { width: 100%; }
+  .pin-form-footer { flex-direction: column; align-items: stretch; gap: 12px; }
+  .pin-form-footer .button { width: 100%; }
   .section-number {
     flex: 0 0 auto;
     white-space: nowrap;

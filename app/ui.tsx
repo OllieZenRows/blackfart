@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { WorldMap } from "./world-map";
+import { WorldMap, type MapLocation } from "./world-map";
+import { PinComposer } from "./pin-composer";
+import { clearPinDraft, persistPinDraft, restorePinDraft, type PinDraft } from "./pin-draft";
 
 type Entry = {
   id: string; category: string; title: string; story: string; mediaType: string | null;
@@ -29,6 +31,7 @@ const samples = [
   { title: "Pocket thunder", file: "pocket-thunder.mp3", note: "Agoris · sound effect, not authenticated", source: "https://freesound.org/people/Agoris/sounds/530076/" },
   { title: "Phone mic / 03", file: "phone-mic-03.mp3", note: "Creator says genuine · not independently verified", source: "https://freesound.org/people/anndszjuvupftbim/sounds/803562/" },
   { title: "Mouth-made decoy", file: "mouth-made.mp3", note: "SamsterBirdies · made with a mouth", source: "https://freesound.org/people/SamsterBirdies/sounds/558740/" },
+  { title: "The squeaky one", file: "squeaky.mp3", note: "mefrancis13 · a video-game-like squeak", source: "https://freesound.org/people/mefrancis13/sounds/117606/" },
 ];
 const labelFor = (value: string) => categories.find(([key]) => key === value)?.[1] ?? "Other circumstances";
 const verificationLabel = (entry: Pick<Entry, "mediaType" | "verificationStatus">) => entry.verificationStatus === "listener-confirmed" ? "LISTENER CHECKED" : entry.mediaType ? "UNVERIFIED CLIP" : "UNVERIFIED STORY";
@@ -50,7 +53,42 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
   const [sample, setSample] = useState(samples[4]);
   const [playingSample, setPlayingSample] = useState(false);
   const [message, setMessage] = useState("");
+  const [pinDraft, setPinDraft] = useState<PinDraft | null>(null);
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinNotice, setPinNotice] = useState("");
+  const pinTouched = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      if (pinTouched.current) return;
+      const saved = restorePinDraft();
+      if (saved) {
+        setPinDraft(saved);
+        if (new URLSearchParams(window.location.search).has("compose")) {
+          requestAnimationFrame(() => document.querySelector(".pin-composer")?.scrollIntoView({ block: "nearest" }));
+        }
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const changePinDraft = (next: PinDraft) => {
+    pinTouched.current = true;
+    setPinDraft(next); persistPinDraft(next); setPinNotice("");
+  };
+
+  const selectMapPin = (location: MapLocation) => {
+    if (pinBusy) return;
+    const isFirstPin = !pinDraft;
+    changePinDraft({ location, story: pinDraft?.story ?? "", category: pinDraft?.category ?? "other" });
+    if (isFirstPin) requestAnimationFrame(() => document.querySelector(".pin-composer")?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  };
+
+  const discardPin = () => {
+    if (pinBusy) return;
+    pinTouched.current = true; clearPinDraft(); setPinDraft(null); setPinNotice("");
+  };
 
   const loadEntries = useCallback(async () => {
     try {
@@ -140,7 +178,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
     <header className="topbar">
       <a className="brand" href="#top" aria-label="Blackfart home"><span className="brand-mark">bƒ</span><span>blackfart<span className="brand-dot">.com</span></span></a>
       <nav className="main-nav" aria-label="Main navigation">
-        <a className="nav-active" href="#chart">Fartifyty</a><a href="#world">World map</a><a href="#sound-lab">Sound lab</a>
+        <a className="nav-active" href="#world">World map</a><a href="#chart">Fartifyty</a><a href="#sound-lab">Sound lab</a>
       </nav>
       <div className="account-actions">
         <button className="coin-pill" onClick={() => setModal("coins")}><span className="coin-dot">F</span> FART COIN <span className="coin-soon">BIDS SOON</span></button>
@@ -154,7 +192,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
           <div className="eyebrow"><span className="asterisk">✳</span> COMMUNITY SOUND ARCHIVE / EST. 2026</div>
           <h1>FARTIFYTY<br /><em>THE TOP HITS.</em></h1>
           <p className="mast-intro">The world&apos;s most serious chart for life&apos;s least dignified moments. Tell the story, submit the sound, let the community decide.</p>
-          <div className="mast-actions"><button className="button button-lime" onClick={() => { setMessage(""); setModal("submit"); }}>Quick log a fart <span aria-hidden="true">↗</span></button><a className="button button-quiet" href="#world">Explore the map ↓</a></div>
+          <div className="mast-actions"><a className="button button-lime" href="#world">Drop a pin, tell the story <span aria-hidden="true">↗</span></a><a className="button button-quiet" href="#chart">Hear the top hits ↓</a></div>
           <div className="cause-line"><span className="cause-star">✳</span> A portion of paid proceeds is intended to support colon-cancer research. Paid bids open after the split and recipient are published.</div>
         </div>
         <div className="hero-art"><div className="hero-art-top"><span>BF / 001</span><span>FIG. 01 · PRESSURE STUDY</span></div><div className="hero-smoke" /><div className="hero-art-bottom"><span>LOW FREQUENCY.</span><strong>HIGH IMPACT.</strong></div><div className="hero-stamp">THE<br />AIR<br />WAVES</div></div>
@@ -162,8 +200,19 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
 
       <div className="ticker"><span>✳ FARTIFYTY CHARTS</span><span>COMMUNITY-VOTED / HUMAN-SUBMITTED</span><span>FART COIN AUCTIONS / IN THE WORKS</span></div>
 
+      <section className="world-section" id="world">
+        <div className="section-heading"><div><span className="section-number">01 /</span><div><p className="eyebrow">AN ATLAS OF HUMANITY</p><h2>THE WORLD<br />AFTER THE FACT.</h2></div></div><div className="chart-meta map-meta">{mapPoints.length} APPROVED MAP LOGS<br /><small>Public pins show a broad area</small></div></div>
+        <div className="map-card">
+          <div className="map-card-head map-first-head"><div><span className="map-status"><i /> DROP IT ON THE MAP</span><p>Tap anywhere to drop your pin. Move it until it&apos;s right, then log your fart.</p></div><span className="map-step-label">01 PIN IT <span>→</span> 02 LOG IT</span></div>
+          <WorldMap points={mapPoints} draftPin={pinDraft?.location ?? null} onSelectPin={selectMapPin} disabled={pinBusy} />
+          {pinDraft && <PinComposer draft={pinDraft} isSignedIn={isSignedIn} signInHref={signInHref} categories={categories} onChange={changePinDraft} onCancel={discardPin} onBusyChange={setPinBusy} onSubmitted={(text) => { clearPinDraft(); setPinDraft(null); setPinNotice(text); void refreshEntries(); }} />}
+          {pinNotice && <div className="pin-success" role="status"><strong>✓ Logged.</strong><span>{pinNotice}</span><button onClick={() => setPinNotice("")}>Got it</button></div>}
+          <div className="map-legend"><span><i /> COMMUNITY PINS · CLICK TO EXPLORE</span><span>ONLY APPROXIMATE AREAS ARE PUBLIC</span></div>
+        </div>
+      </section>
+
       <section className="dashboard" id="chart">
-        <div className="section-heading"><div><span className="section-number">01 /</span><div><p className="eyebrow">THE WEEKLY CHART</p><h2>THE PRESSURE<br className="mobile-only" /> TOP 10</h2></div></div><div className="chart-meta"><span className="live-dot" /> {weeklyNumber} APPROVED {weeklyNumber === 1 ? "ENTRY" : "ENTRIES"}<br /><small>Votes decide the weekly winner and prize.</small></div></div>
+        <div className="section-heading"><div><span className="section-number">02 /</span><div><p className="eyebrow">THE WEEKLY CHART</p><h2>THE PRESSURE<br className="mobile-only" /> TOP 10</h2></div></div><div className="chart-meta"><span className="live-dot" /> {weeklyNumber} APPROVED {weeklyNumber === 1 ? "ENTRY" : "ENTRIES"}<br /><small>Votes decide the weekly winner and prize.</small></div></div>
         {feedError && <div className="notice notice-error" role="status">{feedError} <button onClick={() => void refreshEntries()}>Try again</button></div>}
         {loading ? <div className="empty-chart"><span className="loading-ring" /><span>Warming up the charts…</span></div> : entries.length === 0 ? <div className="empty-chart"><span className="empty-art">∿</span><strong>The first hit is still out there.</strong><span>Write one line or attach a clip. A moderator reviews every entry before it appears here.</span><button className="text-link" onClick={() => { setMessage(""); setModal("submit"); }}>Quick log the first one <span aria-hidden="true">↗</span></button></div> : <div className="chart-list">{entries.slice(0, 10).map((entry, i) => <article className="chart-row" key={entry.id}>
           <div className="rank">{String(i + 1).padStart(2, "0")}<span className="rank-arrow">{i < 3 ? "↗" : "·"}</span></div>
@@ -173,13 +222,8 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
         {isModerator && <button className="moderator-link" onClick={() => void openReview()}>Review desk <span aria-hidden="true">→</span></button>}
       </section>
 
-      <section className="world-section" id="world">
-        <div className="section-heading"><div><span className="section-number">02 /</span><div><p className="eyebrow">AN ATLAS OF HUMANITY</p><h2>THE WORLD<br />AFTER THE FACT.</h2></div></div><div className="chart-meta map-meta">{mapPoints.length} APPROVED MAP LOGS<br /><small>Member opt-in · 0.5° rounded grid</small></div></div>
-        <div className="map-card"><div className="map-card-head"><div><span className="map-status"><i /> MEMBER LOGS</span><p>Pan or zoom the map. Click a pin to open its rounded area in Google Maps. Pins are grouped when they share a grid cell.</p></div><button className="map-log-button" onClick={() => { setMessage(""); setModal("submit"); }}>Add a rough pin <span>↗</span></button></div><WorldMap points={mapPoints} /><div className="map-legend"><span><i /> APPROVED ROUGH AREA · COUNTS CAN GROUP</span><span>0.5° GRID / NO STREET-LEVEL PIN</span></div></div>
-      </section>
-
       <section className="sound-lab" id="sound-lab">
-        <div className="sound-lab-copy"><span className="section-number">03 /</span><p className="eyebrow">THE PRESSURE ROOM</p><h2>THE OPEN<br />SOUND LAB.</h2><p>Nine CC0 reference clips, separate from member entries. Creator descriptions are credited, but they do not verify how a sound was made.</p><a href="/audio/sources.json" target="_blank" rel="noopener noreferrer">Sound credits &amp; licence ↗</a></div>
+        <div className="sound-lab-copy"><span className="section-number">03 /</span><p className="eyebrow">THE PRESSURE ROOM</p><h2>THE OPEN<br />SOUND LAB.</h2><p>Ten CC0 reference clips, separate from member entries. Creator descriptions are credited, but they do not verify how a sound was made.</p><a href="/audio/sources.json" target="_blank" rel="noopener noreferrer">Sound credits &amp; licence ↗</a></div>
         <div className="sample-board"><div className="sample-board-head"><span>CC0 REEL / {String(samples.length).padStart(3, "0")}</span><span>{playingSample ? "PLAYING" : "READY"}</span></div><div className="sample-now"><div className="sample-disc">∿</div><div><strong>{sample.title}</strong><span>{sample.note}</span></div><button className="sample-play" onClick={() => void playSample()} aria-label={playingSample ? "Stop sound" : `Play ${sample.title}`}>{playingSample ? "Ⅱ" : "▶"}</button></div><div className="sample-list">{samples.map((item, index) => <div className="sample-track" key={item.file}><button type="button" className={`sample-select ${item.file === sample.file ? "selected" : ""}`} aria-label={`Select sample: ${item.title}. ${item.note}`} onClick={() => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; } setPlayingSample(false); setSample(item); }}><span>{String(index + 1).padStart(2, "0")}</span><span className="sample-copy"><strong>{item.title}</strong><small>{item.note}</small></span><span>{item.file === sample.file ? "■" : "▶"}</span></button><a className="sample-credit" href={item.source} target="_blank" rel="noopener noreferrer" aria-label={`Open source and licence for ${item.title}`} title="Source and licence">↗</a></div>)}</div><audio ref={audioRef} onEnded={() => setPlayingSample(false)} onError={() => setPlayingSample(false)} /></div>
       </section>
 
@@ -194,7 +238,7 @@ export function BlackfartApp({ isSignedIn, displayName, isModerator, signInHref,
     {modal === "coins" && <div className="modal-backdrop" onMouseDown={(e) => { if (e.currentTarget === e.target) setModal(null); }}><section className="dialog-card coin-dialog" role="dialog" aria-modal="true" aria-labelledby="coin-title"><button className="dialog-close" onClick={() => setModal(null)} aria-label="Close">×</button><span className="coin-emblem">F</span><p className="eyebrow">FART COIN / COMING SOON</p><h2 id="coin-title">THE CHART<br />WILL HAVE A STAKE.</h2><p className="dialog-lede">The Fartifyty chart is live for stories and votes. Cash-convertible coin bids will appear once the conversion terms, charity share, and payout route are ready and visible to members.</p><div className="coin-spec"><span>MEMBER VOTES</span><strong>LIVE</strong><span>FART COIN BIDS</span><strong>PREPARING</strong><span>CASH CONVERSION</span><strong>NOT OPEN</strong></div><button className="button button-quiet full-button" onClick={() => setModal(null)}>Back to the chart</button></section></div>}
     {modal === "review" && <div className="modal-backdrop" onMouseDown={(e) => { if (e.currentTarget === e.target) setModal(null); }}><section className="dialog-card review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title"><button className="dialog-close" onClick={() => setModal(null)} aria-label="Close">×</button><p className="eyebrow">BLACKFART / MODERATION</p><h2 id="review-title">THE REVIEW DESK.</h2>{message && <div className="notice" role="status">{message}</div>}{reviewEntries.length === 0 ? <div className="review-empty">The queue is clear.</div> : <div className="review-list">{reviewEntries.map((entry) => <article key={entry.id}><div className="review-meta"><span>{labelFor(entry.category)}</span><span>{entry.mediaSource === "recorded-in-app" ? "RECORDED IN APP" : entry.mediaType ? "MEMBER UPLOAD" : "STORY ONLY"}</span></div><h3>{entry.title}</h3><p>{entry.story}</p><small>Submitted by {entry.displayName || "member"} · {entry.email || "email unavailable"}</small>{entry.mediaType && <div className="entry-media">{entry.mediaType.startsWith("video/") ? <video controls preload="metadata" src={`/api/media/${entry.id}?review=1`} /> : <audio controls preload="metadata" src={`/api/media/${entry.id}?review=1`} />}</div>}<p className="review-verification-note">Listen to the clip before choosing a status. “Sounds like a fart” records a moderator’s judgment, not forensic proof. Story-only logs must stay unverified.</p><div className="review-actions"><button onClick={() => void review(entry.id, "rejected")}>Reject</button><button onClick={() => void review(entry.id, "approved", "unverified")}>Approve · unverified</button>{entry.mediaType && <button className="button-lime" onClick={() => void review(entry.id, "approved", "listener-confirmed")}>Approve · sounds like a fart</button>}</div></article>)}</div>}<button className="button button-quiet full-button" onClick={() => setModal(null)}>Close review desk</button></section></div>}
     {modal === "submit" && <></>}
-    {isSignedIn && <button className="floating-log" onClick={() => { setMessage(""); setModal("submit"); }} aria-label="Quick log a fart">＋<span>Quick log</span></button>}
+    {!pinDraft && <a className="floating-log" href="#world" aria-label="Drop a pin and add your story">＋<span>Drop a pin</span></a>}
   </div>;
 }
 
@@ -252,7 +296,7 @@ function SubmissionDialog({ isSignedIn, signInHref, onClose, onSubmitted }: { is
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       recorder.onstop = () => {
         const elapsed = Math.min(30000, Date.now() - startedRef.current);
-        const blob = new Blob(chunks, { type: recorder.mimeType || (mode === "video" ? "video/webm" : "audio/webm") });
+        const blob = new Blob(chunks, { type: (recorder.mimeType || (mode === "video" ? "video/webm" : "audio/webm")).split(";")[0] });
         const suffix = mode === "video" ? "webm" : "webm";
         setDurationMs(elapsed);
         setMedia(new File([blob], `blackfart-capture-${Date.now()}.${suffix}`, { type: blob.type }), "capture");

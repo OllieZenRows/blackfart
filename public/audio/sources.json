@@ -83,5 +83,15 @@
     "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "bytes": 12602,
     "creator_description": "Creator says it was made with a mouth and recorded with a Blue Yeti."
+  },
+  {
+    "key": "squeaky",
+    "creator": "mefrancis13",
+    "source": "https://freesound.org/people/mefrancis13/sounds/117606/",
+    "audio": "https://cdn.freesound.org/previews/117/117606_2056891-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 106944,
+    "creator_description": "Creator describes a fart recorded during a microphone session, with a squeak resembling a video-game jump sound. Blackfart has not independently verified that claim."
   }
 ]

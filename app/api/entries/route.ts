@@ -45,7 +45,6 @@ export async function POST(request: Request) {
     if (!title) return jsonError("Give the story a short title.");
     const uploaded = form.get("media");
     const file = uploaded instanceof File && uploaded.size ? uploaded : null;
-    if (!story && !file) return jsonError("Add a story, a recording, or both.");
     if (file && !allowedMedia.has(file.type)) return jsonError("Upload an MP3, WAV, M4A, OGG, WebM, MP4, or MOV recording.");
     if (file && file.size > (file.type.startsWith("video/") ? MAX_VIDEO : MAX_AUDIO)) {
       return jsonError(file.type.startsWith("video/") ? "Video files must be 24 MB or smaller." : "Audio files must be 16 MB or smaller.");
@@ -54,15 +53,19 @@ export async function POST(request: Request) {
     let latitude: number | null = null;
     let longitude: number | null = null;
     if (form.get("shareLocation") === "yes") {
-      const lat = Number(form.get("latitude"));
-      const lng = Number(form.get("longitude"));
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      const rawLat = form.get("latitude");
+      const rawLng = form.get("longitude");
+      const lat = Number(rawLat);
+      const lng = Number(rawLng);
+      if (typeof rawLat !== "string" || !rawLat.trim() || typeof rawLng !== "string" || !rawLng.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
         return jsonError("Turn on rough location sharing or leave the map location off.");
       }
       // Store a coarse grid cell only: about 55 km between points at the equator.
       latitude = Math.round(lat * 2) / 2;
       longitude = Math.round(lng * 2) / 2;
     }
+    if (form.get("entryMode") === "map" && (latitude === null || !story)) return jsonError("Choose a pin and add a short story.");
+    if (!story && !file) return jsonError("Add a story, a recording, or both.");
     const db = database();
     const id = crypto.randomUUID();
     const key = file ? `${id}/${safeName(file.name)}` : null;
