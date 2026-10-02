@@ -1,0 +1,57 @@
+[
+  {
+    "key": "original",
+    "creator": "Breviceps",
+    "source": "https://freesound.org/people/Breviceps/sounds/445998/",
+    "audio": "https://cdn.freesound.org/previews/445/445998_9159316-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 22493
+  },
+  {
+    "key": "subterranean",
+    "creator": "DSISStudios",
+    "source": "https://freesound.org/people/DSISStudios/sounds/521092/",
+    "audio": "https://cdn.freesound.org/previews/521/521092_2628301-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 24317
+  },
+  {
+    "key": "loose",
+    "creator": "DSISStudios",
+    "source": "https://freesound.org/people/DSISStudios/sounds/640803/",
+    "audio": "https://cdn.freesound.org/previews/640/640803_2628301-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 85248,
+    "edit": "Release cut: 0.50\u20130.97 seconds of source, envelope compression and peak normalization to 0.92; no synthesis, time stretching or reverb."
+  },
+  {
+    "key": "cosmic",
+    "creator": "DSISStudios",
+    "source": "https://freesound.org/people/DSISStudios/sounds/640801/",
+    "audio": "https://cdn.freesound.org/previews/640/640801_2628301-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 17856
+  },
+  {
+    "key": "curry",
+    "creator": "DSISStudios",
+    "source": "https://freesound.org/people/DSISStudios/sounds/640799/",
+    "audio": "https://cdn.freesound.org/previews/640/640799_2628301-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 50064
+  },
+  {
+    "key": "aftershock",
+    "creator": "DSISStudios",
+    "source": "https://freesound.org/people/DSISStudios/sounds/640804/",
+    "audio": "https://cdn.freesound.org/previews/640/640804_2628301-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 76368
+  }
+]
