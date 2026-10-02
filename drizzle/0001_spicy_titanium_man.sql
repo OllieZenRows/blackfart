@@ -1,0 +1,1 @@
+ALTER TABLE `entries` ADD `verification_status` text DEFAULT 'unverified' NOT NULL;

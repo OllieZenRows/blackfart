@@ -27,14 +27,21 @@ export async function PATCH(request: Request) {
   if (!(await moderator())) return jsonError("Moderator access required.", 403);
   if (!sameOrigin(request)) return jsonError("Please review from the Blackfart site.", 403);
   try {
-    const { entryId, decision } = await request.json() as { entryId?: string; decision?: string };
+    const { entryId, decision, verificationStatus } = await request.json() as { entryId?: string; decision?: string; verificationStatus?: string };
     if (!entryId || !["approved", "rejected"].includes(decision ?? "")) return jsonError("Choose an entry and an approval decision.");
+    if (decision === "approved" && !["unverified", "listener-confirmed"].includes(verificationStatus ?? "")) {
+      return jsonError("Choose a fart-check status before approving.");
+    }
     const db = database();
-    const row = await db.prepare("SELECT media_key AS mediaKey FROM entries WHERE id = ? AND status = 'pending'").bind(entryId).first<{ mediaKey: string | null }>();
+    const row = await db.prepare("SELECT media_key AS mediaKey, media_type AS mediaType FROM entries WHERE id = ? AND status = 'pending'").bind(entryId).first<{ mediaKey: string | null; mediaType: string | null }>();
     if (!row) return jsonError("That entry has already been reviewed.", 404);
-    await db.prepare("UPDATE entries SET status = ? WHERE id = ? AND status = 'pending'").bind(decision, entryId).run();
+    if (decision === "approved" && verificationStatus === "listener-confirmed" && !row.mediaType) {
+      return jsonError("A story without a recording cannot receive a listener check.");
+    }
+    const savedVerification = decision === "approved" ? verificationStatus : "unverified";
+    await db.prepare("UPDATE entries SET status = ?, verification_status = ? WHERE id = ? AND status = 'pending'").bind(decision, savedVerification, entryId).run();
     if (decision === "rejected" && row.mediaKey) await bucket().delete(row.mediaKey).catch((error) => console.error("Could not remove rejected media", error));
-    return Response.json({ status: decision }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ status: decision, verificationStatus: savedVerification }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Could not apply moderation decision", error);
     return jsonError("That review decision could not be saved.", 503);

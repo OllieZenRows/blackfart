@@ -53,5 +53,35 @@
     "license": "CC0 1.0",
     "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "bytes": 76368
+  },
+  {
+    "key": "pocket-thunder",
+    "creator": "Agoris",
+    "source": "https://freesound.org/people/Agoris/sounds/530076/",
+    "audio": "https://cdn.freesound.org/previews/530/530076_11761340-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 28131,
+    "creator_description": "Sound effect; Blackfart has not authenticated its source."
+  },
+  {
+    "key": "phone-mic-03",
+    "creator": "anndszjuvupftbim",
+    "source": "https://freesound.org/people/anndszjuvupftbim/sounds/803562/",
+    "audio": "https://cdn.freesound.org/previews/803/803562_7895129-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 16416,
+    "creator_description": "Creator describes it as a genuine smartphone recording; Blackfart has not independently verified that claim."
+  },
+  {
+    "key": "mouth-made",
+    "creator": "SamsterBirdies",
+    "source": "https://freesound.org/people/SamsterBirdies/sounds/558740/",
+    "audio": "https://cdn.freesound.org/previews/558/558740_5487341-hq.mp3",
+    "license": "CC0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "bytes": 12602,
+    "creator_description": "Creator says it was made with a mouth and recorded with a Blue Yeti."
   }
 ]

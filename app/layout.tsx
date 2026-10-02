@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
+import "./site-improvements.css";
 
 export const metadata: Metadata = {
   title: "Blackfart — Fartifyty",
-  description: "The world's serious chart for life's least dignified moments. Log a story or real recording, vote, and explore the rough world map.",
+  description: "The world's serious chart for life's least dignified moments. Log a short story or clip, vote, and explore approximate map locations.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

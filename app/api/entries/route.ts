@@ -13,7 +13,7 @@ export async function GET() {
     const rows = await database().prepare(`
       SELECT e.id, e.category, e.title, e.story, e.media_type AS mediaType,
         e.media_source AS mediaSource, e.duration_ms AS durationMs,
-        e.latitude, e.longitude,
+        e.latitude, e.longitude, e.verification_status AS verificationStatus,
         e.created_at AS createdAt, COUNT(v.entry_id) AS votes
       FROM entries e LEFT JOIN entry_votes v ON v.entry_id = e.id
       WHERE e.status = 'approved'
@@ -33,8 +33,8 @@ export async function POST(request: Request) {
   if (!sameOrigin(request)) return jsonError("Please submit from the Blackfart site.", 403);
   try {
     const form = await request.formData();
-    const category = String(form.get("category") ?? "");
-    const title = String(form.get("title") ?? "").trim().slice(0, 90);
+    const category = String(form.get("category") || "other");
+    const title = (String(form.get("title") ?? "").trim() || "Quick log").slice(0, 90);
     const story = String(form.get("story") ?? "").trim().slice(0, 3000);
     const source = form.get("mediaSource") === "capture" ? "recorded-in-app" : "previous-upload";
     const durationValue = Number(form.get("durationMs"));

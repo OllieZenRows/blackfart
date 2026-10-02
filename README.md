@@ -1,6 +1,6 @@
 # Blackfart
 
-Blackfart is an open-source community sound archive. Members sign in with ChatGPT, submit a story, a recording made in the app, or a previous audio/video upload, and vote on approved entries in the Fartifyty chart. A private review desk controls what becomes public. The world map uses only member-approved entries with an explicit rough-location opt-in; stored pins are rounded to a 0.5° grid (about 55 km at the equator).
+Blackfart is an open-source community sound archive. Members sign in with ChatGPT, submit a story, a recording made in the app, or a previous audio/video upload, and vote on approved entries in the Fartifyty chart. A private review desk controls what becomes public. The world map uses only member-approved entries with an explicit rough-location opt-in; stored pins are rounded to a 0.5° grid (about 55 km at the equator), grouped, and linked to Google Maps at that rounded point.
 
 ## Run locally
 
@@ -11,13 +11,15 @@ npm run install:ci
 npm run dev
 ```
 
-The local Sites preview uses a mock ChatGPT identity. Visit `/signin-with-chatgpt?return_to=/` to sign in as `Seedy`, or `/signout-with-chatgpt?return_to=/` to sign out. Local media and database state are for development only.
+The local Sites preview uses a mock ChatGPT identity. Visit `/signin-with-chatgpt?return_to=/` to sign in as `Seedy`, or `/signout-with-chatgpt?return_to=/` to sign out. Local media and database state are for development only. The quick submission path needs one short story line, plus the member's explicit consent; title, category changes, recordings, and map pins are optional.
 
 ## Storage and moderation
 
 Production entry metadata, member IDs, private account emails, votes, and review state use Cloudflare D1. Audio and video bytes use Cloudflare R2. Schema changes are kept in `drizzle/` and applied by the Sites publish workflow. The publisher's ChatGPT email is configured as the private `BF_ADMIN_EMAIL` runtime setting to enable moderation.
 
-Uploaded media stays private while pending review. The chart never receives member email, user IDs, or upload keys. The user must opt in to browser location; only a coarsened map pin is stored. Audio/video may be labeled as recorded in-app or previously uploaded, but that label is not automatic proof that a clip is authentic.
+Uploaded media stays private while pending review. The chart never receives member email, user IDs, or upload keys. The user must opt in to browser location; only a coarsened map pin is stored. Audio/video may be labeled as recorded in-app or previously uploaded, but that label is not automatic proof that a clip is authentic. Approved entries are marked `unverified` unless a moderator listens and explicitly marks a recording `listener-confirmed`; that status means only that the moderator judged it consistent with a fart, not that it is scientifically or forensically authenticated. Story-only entries cannot receive a listener check.
+
+The interactive map uses Leaflet with OpenStreetMap tiles by default and shows required map attribution. Set `NEXT_PUBLIC_OSM_TILE_URL` before the build to use another compatible tile provider. Check that provider's terms and capacity needs before scaling traffic.
 
 ## Fart Coin and cause
 
@@ -25,7 +27,7 @@ Fart Coin is the planned cash-convertible auction currency. Bids and cash conver
 
 ## Sound credits
 
-The six bundled sample recordings are from Freesound contributors Breviceps and DSISStudios and are released under CC0 1.0. `public/audio/sources.json` lists each creator, original source page, and licence; the edited Morning Trumpet cut is also described there. Read the [CC0 1.0 licence](https://creativecommons.org/publicdomain/zero/1.0/).
+The soundboard includes nine Freesound reference clips released under CC0 1.0. They are separate from member submissions. `public/audio/sources.json` lists each creator, source page, preview, licence, and any creator authenticity description. Those descriptions are not independent verification. Read the [CC0 1.0 licence](https://creativecommons.org/publicdomain/zero/1.0/).
 
 ## License
 

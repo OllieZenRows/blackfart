@@ -23,6 +23,7 @@ export const entries = sqliteTable("entries", {
   latitude: real("latitude"),
   longitude: real("longitude"),
   status: text("status").notNull().default("pending"),
+  verificationStatus: text("verification_status").notNull().default("unverified"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   index("entries_public_chart_idx").on(table.status, table.createdAt),
