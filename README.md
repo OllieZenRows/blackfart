@@ -21,6 +21,10 @@ Export renders four bars to a stereo 44.1 kHz PCM WAV in the browser, with an au
 
 Run the sampler tests with `node --experimental-strip-types --test tests/symphony-*.test.mjs`.
 
+“Listen & match” opens the microphone on request, analyzes bass-energy transients locally, and starts EFM after two consistent tempo estimates. The sampler shares the microphone’s audio clock to align its beat and follow subsequent estimates (60–180 BPM). No mic audio is recorded, uploaded, saved, or played through the speakers. Stop listening releases every microphone track; leaving the studio also stops playback. A steady, audible beat works best; noisy rooms, syncopation, and strong subdivisions can make estimates uncertain or produce half/double time. Headphones for EFM prevent it feeding back into its own detector. Tap tempo, half/double speed, and the tempo slider switch to manual control. WAV export contains only the EFM composition.
+
+Randomize groove keeps the current tempo and imported samples while generating restrained rhythms from the six-sound kit. Undo restores the previous instruments and notes. Automated coverage includes synthetic tempo/phase detection, trailing silence/noise rejection, playback alignment, live edits, microphone cancellation/disconnection, and resource cleanup. Acoustic matching with real songs remains dependent on the device and room.
+
 `public/audio/efm/manifest.json` documents each note's source, edit, and measured audio levels. The optional `scripts/build-efm-kit.py` rebuilds the kit from the credited originals; its dependencies are listed at the top of that script. These tools are not required to run the website.
 
 ## Storage and moderation

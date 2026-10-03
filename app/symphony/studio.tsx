@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { efmSamples as samples } from "./samples";
 import { SymphonyEngine, type SymphonyScore, type SymphonyTrack } from "./engine";
+import { estimatePulse, generateGroove } from "./music-analysis";
+import { MusicListener } from "./microphone";
 
 const parts = ["Low end", "Backbeat", "Light rhythm", "Squeak"];
 const steps = (hits: number[]) => Array.from({ length: 16 }, (_, i) => hits.includes(i));
@@ -27,7 +29,19 @@ export function SymphonyStudio() {
   const [notice, setNotice] = useState("");
   const [exportUrl, setExportUrl] = useState("");
   const [imports, setImports] = useState<Record<string, { url: string; name: string }>>({});
+  const [undoScore, setUndoScore] = useState<SymphonyScore | null>(null);
+  const [mic, setMic] = useState<"off" | "requesting" | "listening" | "following">("off");
+  const [micMessage, setMicMessage] = useState("Play music nearby. EFM listens for the beat and joins in.");
+  const [micLevel, setMicLevel] = useState(0);
+  const [matchedBpm, setMatchedBpm] = useState<number | null>(null);
   const engineRef = useRef<SymphonyEngine | null>(null);
+  const listenerRef = useRef<MusicListener | null>(null);
+  const micRequest = useRef(0);
+  const scoreRef = useRef(score);
+  const runningRef = useRef(false);
+  const autoStart = useRef(false);
+  const candidate = useRef<number | null>(null);
+  const taps = useRef<number[]>([]);
   const requestRef = useRef(0);
   const importUrls = useRef(new Set<string>());
   const downloads = useRef(new Set<string>());
@@ -41,20 +55,23 @@ export function SymphonyStudio() {
     const imported = importUrls.current;
     const exported = downloads.current;
     return () => {
-      mounted.current = false; requestRef.current += 1; engineRef.current?.dispose();
+      mounted.current = false; requestRef.current += 1; micRequest.current += 1;
+      listenerRef.current?.stop(); listenerRef.current = null;
+      engineRef.current?.dispose(); engineRef.current = null;
       imported.forEach((url) => URL.revokeObjectURL(url));
       exported.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
 
   const stop = () => {
+    runningRef.current = false; autoStart.current = false;
     requestRef.current += 1; engineRef.current?.stop();
     setPlaying(false); setLoading(false); setPlayhead(-1);
   };
 
   const change = (next: SymphonyScore) => {
     // Editing is immediate; the next scheduled notes use the new score.
-    setScore(next); setPreset("custom"); setError(""); setNotice("");
+    scoreRef.current = next; setScore(next); setPreset("custom"); setError(""); setNotice("");
     if (playing) void engine().update(next).catch((cause: unknown) => {
       if (mounted.current) { stop(); setError(cause instanceof Error ? cause.message : "That sound could not be loaded. Choose another sample."); }
     });
@@ -63,17 +80,89 @@ export function SymphonyStudio() {
 
   const changeTrack = (index: number, fields: Partial<SymphonyTrack>) => change({ ...score, tracks: score.tracks.map((item, i) => i === index ? { ...item, ...fields } : item) });
 
-  const play = async () => {
-    if (playing || loading) { stop(); return; }
-    if (empty) { setError("Turn on a note and an unmuted track first."); return; }
+  const startPlayback = async (input: SymphonyScore) => {
+    if (!input.tracks.some(item => !item.muted && item.volume > 0 && item.steps.some(Boolean))) { setError("Turn on a note and an unmuted track first."); return; }
     const request = ++requestRef.current;
+    runningRef.current = true;
     setError(""); setNotice(""); setLoading(true);
     try {
-      await engine().play(score, (step) => { if (mounted.current && requestRef.current === request) setPlayhead(step); });
+      await engine().play(input, (step) => { if (mounted.current && requestRef.current === request) setPlayhead(step); });
       if (mounted.current && requestRef.current === request) { setPlaying(true); setLoading(false); }
     } catch (cause) {
-      if (mounted.current && requestRef.current === request) { setLoading(false); setPlaying(false); setError(cause instanceof Error ? cause.message : "Could not start EFM. Try again."); }
+      if (mounted.current && requestRef.current === request) { runningRef.current = false; setLoading(false); setPlaying(false); setError(cause instanceof Error ? cause.message : "Could not start EFM. Try again."); }
     }
+  };
+  const play = () => { if (runningRef.current) stop(); else void startPlayback(scoreRef.current); };
+
+  const stopListening = () => {
+    micRequest.current += 1; listenerRef.current?.stop(); engineRef.current?.releaseBeat();
+    autoStart.current = false; candidate.current = null;
+    setMic("off"); setMicLevel(0); setMatchedBpm(null);
+    setMicMessage("Mic off. Your groove keeps its last tempo.");
+  };
+
+  const listen = async () => {
+    if (mic !== "off") { stopListening(); return; }
+    const request = ++micRequest.current;
+    autoStart.current = true; candidate.current = null; taps.current = [];
+    setError(""); setMic("requesting"); setMicMessage("Allow microphone access when your browser asks.");
+    listenerRef.current ??= new MusicListener(() => engine().audioContext());
+    try {
+      const started = await listenerRef.current.start((frames, level) => {
+        if (!mounted.current || request !== micRequest.current) return;
+        setMicLevel(level);
+        const pulse = estimatePulse(frames);
+        if (!pulse || pulse.confidence < 0.74) {
+          candidate.current = null; engineRef.current?.releaseBeat(); setMic("listening"); setMatchedBpm(null);
+          setMicMessage(frames.length < 180 ? "Listening… give it a few steady beats." : "Finding the beat. Try clearer music, or tap the tempo below.");
+          return;
+        }
+        if (candidate.current === null || Math.abs(pulse.bpm - candidate.current) > 3) {
+          engineRef.current?.releaseBeat();
+          candidate.current = pulse.bpm; setMic("listening"); setMatchedBpm(null);
+          setMicMessage("Beat detected. Checking the tempo…"); return;
+        }
+        const bpm = Math.round(pulse.bpm);
+        candidate.current = pulse.bpm;
+        const next = { ...scoreRef.current, tempo: bpm };
+        scoreRef.current = next; setScore(next);
+        engine().matchBeat(bpm, pulse.beatTime);
+        setMic("following"); setMatchedBpm(bpm);
+        setMicMessage("Following the beat. Tempo and timing update as the music plays.");
+        if (autoStart.current && !runningRef.current) { autoStart.current = false; void startPlayback(next); }
+      }, () => {
+        if (!mounted.current || request !== micRequest.current) return;
+        stopListening(); setMicMessage("Microphone disconnected. Your groove is still available.");
+      });
+      if (started && mounted.current && request === micRequest.current) { setMic("listening"); setMicMessage("Listening… give it a few steady beats."); }
+    } catch (cause) {
+      if (mounted.current && request === micRequest.current) { stopListening(); setMicMessage(cause instanceof Error ? cause.message : "Could not open the microphone."); }
+    }
+  };
+
+  const manualTempo = (bpm: number, beatTime?: number) => {
+    if (mic !== "off") stopListening();
+    else engineRef.current?.releaseBeat();
+    const next = { ...scoreRef.current, tempo: Math.max(60, Math.min(180, bpm)) };
+    change(next);
+    if (beatTime !== undefined) engine().matchBeat(next.tempo, beatTime);
+  };
+  const tapTempo = () => {
+    const time = engine().audioContext().currentTime;
+    // A resumed clock is needed even when the transport has never played.
+    void engine().audioContext().resume();
+    if (taps.current.length && time - taps.current[taps.current.length - 1] > 2) taps.current = [];
+    taps.current.push(time); taps.current = taps.current.slice(-6);
+    if (taps.current.length < 3) { setNotice("Keep tapping with the beat…"); return; }
+    const intervals = taps.current.slice(1).map((value, i) => value - taps.current[i]).filter(value => value > 0.25 && value < 1.2).sort((a, b) => a - b);
+    if (intervals.length < 2) return;
+    manualTempo(Math.round(60 / intervals[Math.floor(intervals.length / 2)]), time);
+    setNotice("Tempo set from your taps. Mic off; press Listen & match to follow automatically again.");
+  };
+
+  const randomize = () => {
+    setUndoScore(scoreRef.current); change(generateGroove(scoreRef.current));
+    setNotice("Fresh groove. Same tempo, softer sounds.");
   };
 
   const preview = async (item: SymphonyTrack) => {
@@ -83,7 +172,11 @@ export function SymphonyStudio() {
   };
 
   const choosePreset = (value: string) => {
-    stop(); setScore(copyPreset(Number(value))); setPreset(value); setError(""); setNotice("");
+    stop();
+    const next = copyPreset(Number(value));
+    if (mic !== "off") next.tempo = scoreRef.current.tempo;
+    else engineRef.current?.releaseBeat();
+    scoreRef.current = next; setScore(next); setPreset(value); setError(""); setNotice("");
   };
 
   const importAudio = (file: File | undefined, index: number) => {
@@ -116,14 +209,21 @@ export function SymphonyStudio() {
     <header className="symphony-header"><Link className="brand" href="/"><span className="brand-mark">bƒ</span><span>blackfart<span className="brand-dot">.com</span></span></Link><Link href="/#sound-lab">← Back to the sound lab</Link></header>
     <main className="symphony-main">
       <div className="symphony-title"><div><p className="eyebrow">ELECTRONIC FART MUSIC</p><h1><em>EFM.</em></h1></div><div className="symphony-opus" aria-hidden="true">bƒ<span>VOL. 01</span></div></div>
-      <p className="symphony-intro">Pick a groove. Tap the notes. Make it yours.</p>
+      <p className="symphony-intro">Make a groove. Or let the music lead.</p>
+
+      <section className={`efm-listen ${mic === "following" ? "is-following" : ""}`} aria-label="Match nearby music">
+        <div className="efm-listen-heading"><div><p className="eyebrow">LET IT LISTEN</p><h2>YOUR MUSIC. EFM’S BEAT.</h2></div><span className="efm-mic-state"><i className={mic !== "off" ? "live-dot" : ""} />{mic === "off" ? "MIC OFF" : mic === "requesting" ? "WAITING FOR MIC" : "MIC ON"}</span></div>
+        <div className="efm-listen-main"><button type="button" className="button button-lime" onClick={() => void listen()}>{mic === "off" ? "◎ Listen & match" : mic === "requesting" ? "Cancel microphone" : "■ Stop listening"}</button><div className="efm-listen-result" role="status"><strong>{matchedBpm ? `≈ ${matchedBpm} BPM` : mic === "off" ? "Ready when you are" : "Finding your rhythm…"}</strong><span>{micMessage}</span></div><div className="efm-input-meter" role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(micLevel * 100)}><span style={{ height: `${Math.max(3, micLevel * 100)}%` }} /></div></div>
+        <div className="efm-listen-footer"><p>Mic audio stays on your device. Use headphones for EFM so it follows the music around you. Works best with a clear, steady beat.</p><div><button type="button" onClick={tapTempo}>Tap tempo</button><button type="button" disabled={score.tempo / 2 < 60} onClick={() => manualTempo(Math.round(score.tempo / 2))}>½ speed</button><button type="button" disabled={score.tempo * 2 > 180} onClick={() => manualTempo(score.tempo * 2)}>2× speed</button></div></div>
+      </section>
 
       <section className="symphony-console" aria-label="EFM beat maker">
         <div className="symphony-toolbar">
           <button className={`button button-lime symphony-play ${playing ? "is-playing" : ""}`} onClick={() => void play()} disabled={empty && !playing && !loading}>{loading ? "■ Cancel loading" : playing ? "■ Stop EFM" : "▶ Play EFM"}</button>
           <label className="symphony-preset"><span>Start with a groove</span><select value={preset} onChange={(event) => choosePreset(event.currentTarget.value)}>{preset === "custom" && <option value="custom" disabled>Your composition</option>}{presets.map((item, index) => <option key={item.name} value={index}>{item.name}</option>)}</select></label>
-          <label className="symphony-tempo"><span>Tempo <strong>{score.tempo} <small>BPM</small></strong></span><input type="range" min="60" max="160" step="1" value={score.tempo} aria-label="Tempo" onChange={(event) => change({ ...score, tempo: Number(event.currentTarget.value) })} /></label>
+          <label className="symphony-tempo"><span>Tempo <strong>{score.tempo} <small>BPM</small></strong></span><input type="range" min="60" max="180" step="1" value={score.tempo} aria-label="Tempo" onChange={(event) => manualTempo(Number(event.currentTarget.value))} /></label>
         </div>
+        <div className="efm-random"><button type="button" onClick={randomize}>⤨ Randomize groove</button>{undoScore && <button type="button" onClick={() => { change({ ...undoScore, tempo: scoreRef.current.tempo }); setUndoScore(null); }}>Undo randomize</button>}<span>New rhythm. Same tempo. Always mellow.</span></div>
         <div className="symphony-score-meta"><span><i className={playing ? "live-dot" : ""} />{playing ? "IN THE GROOVE" : loading ? "LOADING YOUR SOUNDS…" : "SIX SOFTER SOUNDS. FOUR TRACKS."}</span><span>16 NOTES · 4 BEATS · LOOPS</span></div>
 
         <div className="symphony-tracks">{score.tracks.map((item, index) => <section className={`symphony-track ${item.muted ? "is-muted" : ""}`} key={item.id} aria-label={parts[index]}>
@@ -148,6 +248,6 @@ export function SymphonyStudio() {
       <div className="symphony-export"><div><h2>KEEP YOUR GROOVE.</h2><p>Download four bars as a WAV. No account needed.</p></div><button type="button" className="button button-lime" onClick={() => void download()} disabled={exporting || empty}>{exporting ? "Making your WAV…" : "↓ Download EFM"}</button></div>
       <footer className="symphony-footer"><span>Six trimmed, softened samples with matched levels. Your own audio stays on this device.</span><a href="/audio/efm/manifest.json" target="_blank" rel="noopener noreferrer">CC0 sample credits ↗</a></footer>
     </main>
-    {(playing || loading) && <button className="symphony-mobile-stop" onClick={stop} aria-label="Stop playback">■ Stop</button>}
+    {(playing || loading || mic !== "off") && <button className="symphony-mobile-stop" onClick={() => { stop(); stopListening(); }} aria-label="Stop playback and microphone">■ Stop all</button>}
   </div>;
 }

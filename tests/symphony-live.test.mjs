@@ -114,3 +114,34 @@ test('current failed edit reports a usable error without replacing the working s
   assert.equal(f.starts.at(-1).id,1);
  }finally{engine.dispose();f.restore()}
 });
+
+test('matched start and repeated estimates align notes without skipping a stable beat',async()=>{
+ const f=fixture(),engine=new SymphonyEngine();
+ try {
+  engine.matchBeat(120,0.1);
+  await start(engine,f);
+  assert.deepEqual(f.starts.map(n=>n.time),[0.1]);
+  f.advance(0.13);
+  engine.matchBeat(120,0.1);
+  f.advance(0.26);
+  assert.deepEqual(f.starts.map(n=>Number(n.time.toFixed(3))),[0.1,0.225,0.35]);
+  assert.equal(new Set(f.starts.map(n=>n.time)).size,f.starts.length);
+ }finally{engine.dispose();f.restore()}
+});
+
+test('a sample edit cannot overwrite the latest matched tempo',async()=>{
+ const f=fixture(),engine=new SymphonyEngine();
+ try {
+  await start(engine,f);
+  const pending=engine.update(score('b'));
+  engine.matchBeat(100,0.1);
+  f.resolve('/audio/b.mp3',2);await pending;
+  f.advance(0.2);f.advance(0.4);
+  const times=f.starts.slice(-2).map(n=>n.time);
+  assert.ok(Math.abs(times[1]-times[0]-0.15)<1e-8);
+  engine.stop();engine.releaseBeat();
+  await engine.play(score('b'),()=>{});
+  f.advance(0.55);
+  assert.ok(Math.abs(f.starts.at(-1).time-0.585)<1e-8);
+ }finally{engine.dispose();f.restore()}
+});

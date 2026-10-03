@@ -58,6 +58,27 @@ export class SymphonyEngine {
   private playback?: { score: SymphonyScore; buffers: Map<string, AudioBuffer> };
   private liveOutput?: GainNode;
   private previewOutput?: GainNode;
+  private clock?: { nextTime: number; nextStep: number };
+  private beat?: { bpm: number; time: number };
+
+  /** The microphone and sequencer share one clock, without monitoring mic audio. */
+  audioContext(): AudioContext { return this.live(); }
+
+  /** Align future notes to an estimated quarter-note pulse. Already scheduled notes finish. */
+  matchBeat(bpm: number, time: number): void {
+    if (!Number.isFinite(bpm) || !Number.isFinite(time)) return;
+    this.beat = { bpm: clamp(bpm, 60, 180), time };
+    if (this.playback) this.playback.score.tempo = this.beat.bpm;
+    if (this.clock && this.context) {
+      const quarter = 60 / this.beat.bpm;
+      const phase = this.clock.nextStep % 4;
+      const target = time + phase * quarter / 4;
+      const after = Math.max(this.context.currentTime + 0.015, this.clock.nextTime - quarter / 8);
+      this.clock.nextTime = target + Math.ceil((after - target) / quarter) * quarter;
+    }
+  }
+
+  releaseBeat(): void { this.beat = undefined; }
 
   private assertAlive(): void {
     if (this.dead) throw new Error('Audio engine has been disposed.');
@@ -174,8 +195,13 @@ export class SymphonyEngine {
     const bus = output(context, score.tracks.length);
     this.liveOutput = bus;
     this.playback = { score, buffers: new Map(tracks.map((track, i) => [track.sample, buffers[i]])) };
-    let nextTime = context.currentTime + 0.06;
-    let nextStep = 0;
+    const start = context.currentTime + 0.06;
+    if (this.beat) score.tempo = this.beat.bpm;
+    const period = 60 / score.tempo;
+    const clock = this.clock = {
+      nextTime: this.beat ? this.beat.time + Math.ceil((start - this.beat.time) / period) * period : start,
+      nextStep: 0,
+    };
     const pending: { time: number; step: number }[] = [];
     const tick = () => {
       if (token !== this.generation || this.dead) return;
@@ -184,19 +210,19 @@ export class SymphonyEngine {
       const stepDuration = 60 / current.score.tempo / 4;
       const now = context.currentTime;
       // Background throttling skips missed notes rather than emitting a burst.
-      if (nextTime < now - stepDuration) {
-        const missed = Math.ceil((now - nextTime) / stepDuration);
-        nextStep = (nextStep + missed) % 16;
-        nextTime += missed * stepDuration;
+      if (clock.nextTime < now - stepDuration) {
+        const missed = Math.ceil((now - clock.nextTime) / stepDuration);
+        clock.nextStep = (clock.nextStep + missed) % 16;
+        clock.nextTime += missed * stepDuration;
       }
-      while (nextTime < now + 0.12) {
+      while (clock.nextTime < now + 0.12) {
         current.score.tracks.forEach((track) => {
           const buffer = current.buffers.get(track.sample);
-          if (buffer && !track.muted && track.steps[nextStep]) this.trigger(context, bus, buffer, nextTime, track.pitch, track.volume, true);
+          if (buffer && !track.muted && track.steps[clock.nextStep]) this.trigger(context, bus, buffer, clock.nextTime, track.pitch, track.volume, true);
         });
-        pending.push({ time: nextTime, step: nextStep });
-        nextStep = (nextStep + 1) % 16;
-        nextTime += stepDuration;
+        pending.push({ time: clock.nextTime, step: clock.nextStep });
+        clock.nextStep = (clock.nextStep + 1) % 16;
+        clock.nextTime += stepDuration;
       }
       let visible: number | undefined;
       while (pending.length && pending[0].time <= now) visible = pending.shift()!.step;
@@ -216,6 +242,7 @@ export class SymphonyEngine {
     try {
       const buffers = await Promise.all(tracks.map(track => this.load(track.sample)));
       if (this.dead || token !== this.generation || edit !== this.editGeneration || !this.playback) return;
+      if (this.beat) score.tempo = this.beat.bpm;
       this.playback = { score, buffers: new Map(tracks.map((track, i) => [track.sample, buffers[i]])) };
     } catch (error) {
       if (!this.dead && token === this.generation && edit === this.editGeneration) throw error;
@@ -227,6 +254,7 @@ export class SymphonyEngine {
     this.generation++;
     this.editGeneration++;
     this.playback = undefined;
+    this.clock = undefined;
     if (this.timer !== undefined) clearInterval(this.timer);
     this.timer = undefined;
     for (const voice of this.voices) {
